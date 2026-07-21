@@ -44,6 +44,33 @@ foreach ($dir in @([Environment]::GetFolderPath('Programs'), [Environment]::GetF
   $lnk.Save()
 }
 
+# 5. Register an uninstaller: a Start Menu "Uninstall" shortcut + a Windows
+#    "Apps & features" entry (so it can also be removed from Settings). Both run
+#    the uninstall one-liner.
+$psExe        = Join-Path $env:WINDIR 'System32\WindowsPowerShell\v1.0\powershell.exe'
+$UninstallArg = '-NoProfile -ExecutionPolicy Bypass -Command "irm https://raw.githubusercontent.com/TrulyAsleep/F1RaceEngineer-dist/main/uninstall.ps1 | iex"'
+
+$ulnk = $shell.CreateShortcut((Join-Path ([Environment]::GetFolderPath('Programs')) 'Uninstall F1 Race Engineer.lnk'))
+$ulnk.TargetPath       = $psExe
+$ulnk.Arguments        = $UninstallArg
+$ulnk.WorkingDirectory = $Install
+$ulnk.Description       = 'Uninstall F1 Race Engineer'
+$ulnk.Save()
+
+$ver = ''
+try { $ver = (Invoke-RestMethod 'https://api.github.com/repos/TrulyAsleep/F1RaceEngineer-dist/releases/latest' -Headers @{ 'User-Agent' = 'F1RE-install' }).tag_name.TrimStart('v','V') } catch { }
+
+$reg = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\F1RaceEngineer'
+New-Item -Path $reg -Force | Out-Null
+New-ItemProperty -Path $reg -Name 'DisplayName'     -Value 'F1 Race Engineer'             -Force | Out-Null
+New-ItemProperty -Path $reg -Name 'Publisher'       -Value 'F1 Race Engineer'             -Force | Out-Null
+New-ItemProperty -Path $reg -Name 'DisplayIcon'     -Value $AppExe                        -Force | Out-Null
+New-ItemProperty -Path $reg -Name 'InstallLocation' -Value $Install                       -Force | Out-Null
+New-ItemProperty -Path $reg -Name 'UninstallString' -Value ($psExe + ' ' + $UninstallArg) -Force | Out-Null
+New-ItemProperty -Path $reg -Name 'NoModify' -PropertyType DWord -Value 1 -Force | Out-Null
+New-ItemProperty -Path $reg -Name 'NoRepair' -PropertyType DWord -Value 1 -Force | Out-Null
+if ($ver) { New-ItemProperty -Path $reg -Name 'DisplayVersion' -Value $ver -Force | Out-Null }
+
 Write-Host ''
 Write-Host '  Done - launching F1 Race Engineer.' -ForegroundColor Green
 Write-Host '  (Also on your Start Menu and Desktop as "F1 Race Engineer".)'

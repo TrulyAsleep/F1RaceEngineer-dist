@@ -7,16 +7,19 @@ game's telemetry, plus a Discord-linked driver community with XP and a leaderboa
 
 ## Install (or update)
 
-Paste this into **Win + R** (or any PowerShell window) and press Enter:
+**Option A — one-liner.** Paste this into **Win + R** (or any PowerShell window) and press Enter:
 
 ```
 powershell -NoProfile -ExecutionPolicy Bypass -Command "irm https://raw.githubusercontent.com/TrulyAsleep/F1RaceEngineer-dist/main/install.ps1 | iex"
 ```
 
-It downloads the latest build (~68 MB, self-contained — no .NET install needed), unpacks it to
-`%LOCALAPPDATA%\Programs\F1RaceEngineer`, adds Start-Menu + Desktop shortcuts, and launches.
-**Re-run the same line any time to update** — though once installed, the app can also update itself
-from **Settings → Check for updates**.
+**Option B — wizard.** Download **`F1RaceEngineerSetup.exe`** from the [latest release](../../releases/latest)
+and run it.
+
+Both install to `%LOCALAPPDATA%\Programs\F1RaceEngineer` (no admin needed) and add Start-Menu +
+Desktop shortcuts. The download is ~68 MB, self-contained — **no .NET install required**. Re-run the
+one-liner (or a newer setup.exe) to update; once installed, the app can also update itself from
+**Settings → Check for updates**.
 
 ## First run
 
@@ -26,11 +29,26 @@ from **Settings → Check for updates**.
 3. Copy **your join key** and paste it into the server's verify channel to get your Verified Driver
    role. The key is tied to your PC and reserved to your Discord account.
 
+## Uninstall
+
+- **Windows Settings → Apps → Installed apps → F1 Race Engineer → Uninstall** (both install methods
+  register here), or the **"Uninstall F1 Race Engineer"** Start-Menu shortcut.
+- **Or the one-liner:**
+
+  ```
+  powershell -NoProfile -ExecutionPolicy Bypass -Command "irm https://raw.githubusercontent.com/TrulyAsleep/F1RaceEngineer-dist/main/uninstall.ps1 | iex"
+  ```
+
+Uninstalling **keeps** your settings, Discord sign-in and join key by default. The setup.exe
+uninstaller asks whether to remove them too; the one-liner keeps them unless you download
+`uninstall.ps1` and run it with `-PurgeData`.
+
 ## What's in this repo
 
-This is the **distribution + auto-update** repo only — just the installer script and the released
-builds. The app source lives elsewhere.
+This is the **distribution + auto-update** repo only — the installer scripts and the released builds.
+The app source lives elsewhere.
 
 - [`install.ps1`](install.ps1) — the installer/updater the one-liner runs.
-- [Releases](../../releases) — each tagged build with `F1RaceEngineer.zip` attached. The app checks
-  the newest release to offer in-app updates.
+- [`uninstall.ps1`](uninstall.ps1) — the uninstaller.
+- [Releases](../../releases) — each tagged build with `F1RaceEngineer.zip` (self-contained app) and
+  `F1RaceEngineerSetup.exe` (wizard installer) attached.
