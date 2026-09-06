@@ -5,6 +5,10 @@
 #   Live (default): the newest tagged release.
 #   Beta:           set $env:F1RE_BRANCH = 'beta' first - the newest build, prereleases included.
 # It never downgrades: a newer install is left alone unless $env:F1RE_FORCE = '1'.
+#
+# This is the source copy (installer\install.ps1 in the app repo). The served copy is
+# dist\install.ps1 here and install.ps1 on the dist repo's main branch: copy this file
+# over both when it changes, or the one-liner keeps running the old one.
 
 $ErrorActionPreference = 'Stop'
 
@@ -40,9 +44,9 @@ try {
 
 # 2. Never downgrade. FileVersion is the numeric core of the version, which is all a
 #    downgrade check needs (a beta of the NEXT version still counts as newer).
-if ($ver -and (Test-Path $AppExe) -and -not $env:F1RE_FORCE) {
+if ($ver -and (Test-Path -LiteralPath $AppExe) -and -not $env:F1RE_FORCE) {
   try {
-    $have = [version](Get-Item $AppExe).VersionInfo.FileVersion
+    $have = [version](Get-Item -LiteralPath $AppExe).VersionInfo.FileVersion
     $want = [version](($ver -split '-')[0] + '.0')
     if ($have -gt $want) {
       Write-Host ("  Installed " + $have + " is newer than the " + $Branch + " release " + $ver + " - keeping it.") -ForegroundColor Yellow
@@ -59,20 +63,50 @@ Start-Sleep -Milliseconds 600
 
 # 4. Download the app (self-contained - no .NET install needed).
 $tmp = Join-Path $env:TEMP ('f1re_' + [guid]::NewGuid().ToString('N') + '.zip')
-Write-Host ('  Downloading ' + $(if ($ver) { 'v' + $ver } else { 'the newest release' }) + ' (about 70 MB)...')
+Write-Host ('  Downloading ' + $(if ($ver) { 'v' + $ver } else { 'the newest release' }) + ' (about 60 MB)...')
 Invoke-WebRequest -Uri $ZipUrl -OutFile $tmp -UseBasicParsing
 
-# 5. Fresh install into %LOCALAPPDATA%\Programs\F1RaceEngineer.
-if (Test-Path $Install) { Remove-Item $Install -Recurse -Force }
+# 5. Install into %LOCALAPPDATA%\Programs\F1RaceEngineer. The release layout is one exe
+#    plus Dashboard\, Plugins\, SimHubPlugin\ and release.trulyasleep, nothing else.
+#    Same order as the in-app updater's swap script (Core's UpdateScript, the one list):
+#    the zip is extracted to a stage folder FIRST, so a bad download changes nothing;
+#    only when the exe is in the stage does the old install get cleared - the whole
+#    folder if it will go, and then, for a file the wipe could not take (something still
+#    holding it), the block that clears everything an older loose-layout install (0.3.0:
+#    246 runtime DLLs, json, pdb, xml, createdump.exe, runtimes\ and 13 language folders
+#    in the install root) could have left - and the stage is copied over what remains.
+#    Every path is taken literally (-LiteralPath, .NET calls, items piped by their own
+#    path): the install folder sits under the user profile, and a user name with [ ] in
+#    it turns a -Path into a wildcard that matches nothing (Expand-Archive and New-Item
+#    then fail outright), which is how the old script could wipe and not reinstall.
+$stage = Join-Path $env:TEMP ('f1re_stage_' + [guid]::NewGuid().ToString('N'))
+Write-Host '  Extracting...'
+Add-Type -AssemblyName System.IO.Compression.FileSystem
+[System.IO.Compression.ZipFile]::ExtractToDirectory($tmp, $stage)
+Remove-Item -LiteralPath $tmp -Force -ErrorAction SilentlyContinue
+if (-not (Test-Path -LiteralPath (Join-Path $stage 'F1RaceEngineer.App.exe'))) {
+  Remove-Item -LiteralPath $stage -Recurse -Force -ErrorAction SilentlyContinue
+  throw 'The download is not a F1 Race Engineer release (no F1RaceEngineer.App.exe inside) - nothing was changed.'
+}
+if (Test-Path -LiteralPath $Install) { Remove-Item -LiteralPath $Install -Recurse -Force -ErrorAction SilentlyContinue }
+[System.IO.Directory]::CreateDirectory($Install) | Out-Null
+# Clear what an older loose-layout install left behind (the single-file layout has none of these).
+foreach ($f in '*.dll','*.json','*.pdb','*.xml','createdump.exe') {
+  Get-ChildItem -LiteralPath $Install -File -ErrorAction SilentlyContinue | Where-Object { $_.Name -like $f } | Remove-Item -Force -ErrorAction SilentlyContinue
+}
+foreach ($d in 'runtimes','cs','de','es','fr','it','ja','ko','pl','pt-BR','ru','tr','zh-Hans','zh-Hant') {
+  Remove-Item -LiteralPath (Join-Path $Install $d) -Recurse -Force -ErrorAction SilentlyContinue
+}
+# The manifest lists the plugins this version ships and the loader refuses any other: replace the set whole.
+Get-ChildItem -LiteralPath (Join-Path $Install 'Plugins') -Filter *.dll -File -ErrorAction SilentlyContinue | Remove-Item -Force -ErrorAction SilentlyContinue
 # The wizard installer's Apps & features entry points at an uninstaller that lives in
 # that folder - drop the entry so only this install's remains.
-Remove-Item 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\{8E9C4B21-5A7D-4E3F-9B12-A1C3D5E7F901}_is1' -Recurse -Force -ErrorAction SilentlyContinue
-New-Item -ItemType Directory -Force -Path $Install | Out-Null
-Write-Host '  Extracting...'
-Expand-Archive -Path $tmp -DestinationPath $Install -Force
-Remove-Item $tmp -Force
+Remove-Item -LiteralPath 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\{8E9C4B21-5A7D-4E3F-9B12-A1C3D5E7F901}_is1' -Recurse -Force -ErrorAction SilentlyContinue
+# Items piped from Get-ChildItem copy by their literal path; a folder copied onto an existing one merges.
+Get-ChildItem -LiteralPath $stage -Force | Copy-Item -Destination $Install -Recurse -Force
+Remove-Item -LiteralPath $stage -Recurse -Force -ErrorAction SilentlyContinue
 
-if (-not (Test-Path $AppExe)) { throw ('Install looks incomplete - ' + $AppExe + ' is missing.') }
+if (-not (Test-Path -LiteralPath $AppExe)) { throw ('Install looks incomplete - ' + $AppExe + ' is missing.') }
 
 # 6. Start Menu + Desktop shortcuts.
 $shell = New-Object -ComObject WScript.Shell
@@ -98,7 +132,7 @@ $ulnk.Description       = 'Uninstall F1 Race Engineer'
 $ulnk.Save()
 
 # The exe carries the version the app itself reports; prefer it over the tag.
-try { $exeVer = (Get-Item $AppExe).VersionInfo.ProductVersion; if ($exeVer) { $ver = $exeVer.Trim() } } catch { }
+try { $exeVer = (Get-Item -LiteralPath $AppExe).VersionInfo.ProductVersion; if ($exeVer) { $ver = $exeVer.Trim() } } catch { }
 
 $reg = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\F1RaceEngineer'
 New-Item -Path $reg -Force | Out-Null
