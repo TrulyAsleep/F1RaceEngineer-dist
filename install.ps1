@@ -23,23 +23,49 @@ Write-Host ("  F1 RACE ENGINEER - installing (" + $Branch + " branch)") -Foregro
 Write-Host ''
 
 # 1. Resolve the release. GitHub's "latest" hides prereleases, which is exactly the
-#    Live rule; Beta walks the list (newest first) for the first non-draft release.
-$ZipUrl = 'https://github.com/' + $Repo + '/releases/latest/download/F1RaceEngineer.zip'
+#    Live rule; Beta walks the list (newest first) for the first non-draft release whose
+#    tag is a version. The dist repo also carries releases that are not app builds - the
+#    voice pack sat on a "voice-packs" tag - and one of those can be the newest of all,
+#    so without the filter Beta would install a voice pack as the app.
+$AppZip     = 'F1RaceEngineer.zip'                     # the legacy, unversioned name
+# ...or the versioned one the build now writes. The digit after the dash is what keeps
+# F1RaceEngineerSetup-*.zip and F1RaceEngineer-Offline.zip out - same rule as
+# ReleaseAssets.IsAppZip in the app.
+$AppZipRx   = '^F1RaceEngineer(-\d[0-9A-Za-z.+-]*)?\.zip$'
+$VersionTag = '^[vV]?\d+(\.\d+)+([-+].*)?$'   # two numeric parts at least, same as ReleaseChannel.IsVersionTag
+$ZipUrl = ''
 $ver = ''
+$rel = $null
 try {
   if ($Branch -eq 'beta') {
     $rel = (Invoke-RestMethod ('https://api.github.com/repos/' + $Repo + '/releases?per_page=30') -Headers $Api) |
-      Where-Object { -not $_.draft } | Select-Object -First 1
+      Where-Object { -not $_.draft -and $_.tag_name -match $VersionTag } | Select-Object -First 1
   } else {
     $rel = Invoke-RestMethod ('https://api.github.com/repos/' + $Repo + '/releases/latest') -Headers $Api
   }
-  if ($rel) {
-    $ver = $rel.tag_name.TrimStart('v','V')
-    $zip = $rel.assets | Where-Object { $_.name -like '*.zip' } | Select-Object -First 1
-    if ($zip) { $ZipUrl = $zip.browser_download_url }
-  }
 } catch {
   if ($Branch -eq 'beta') { throw 'Could not list releases for the beta branch - try again in a minute.' }
+}
+
+# The app is the asset named exactly F1RaceEngineer.zip, never the first .zip on the
+# release: a build writes the setup zip beside it, and an offline build adds a third.
+# The first-zip guess is what the in-app updater was fixed off (ReleaseAssets.AppZip),
+# and here it is worse - the setup zip at least trips the check at step 5, while an
+# offline zip installs clean and silently moves the driver to the Offline data folder.
+# So when the named asset is not there, stop and say so.
+if ($rel) {
+  $ver = $rel.tag_name.TrimStart('v','V')
+  $asset = $rel.assets | Where-Object { $_.name -match $AppZipRx } | Select-Object -First 1
+  if (-not $asset) {
+    throw ('Release ' + $rel.tag_name + ' has no ' + $AppZip + ' attached - nothing was changed. If the release was cut minutes ago its files may still be uploading; otherwise install by hand from https://github.com/' + $Repo + '/releases.')
+  }
+  $ZipUrl = $asset.browser_download_url
+}
+if (-not $ZipUrl) {
+  if ($Branch -eq 'beta') { throw 'No tagged release on the beta branch - try again in a minute.' }
+  # Live only, and only when the API itself did not answer: the release page serves the
+  # newest release's asset BY NAME, so this is the same exact-name rule, not a guess.
+  $ZipUrl = 'https://github.com/' + $Repo + '/releases/latest/download/' + $AppZip
 }
 
 # 2. Never downgrade. FileVersion is the numeric core of the version, which is all a
@@ -63,7 +89,7 @@ Start-Sleep -Milliseconds 600
 
 # 4. Download the app (self-contained - no .NET install needed).
 $tmp = Join-Path $env:TEMP ('f1re_' + [guid]::NewGuid().ToString('N') + '.zip')
-Write-Host ('  Downloading ' + $(if ($ver) { 'v' + $ver } else { 'the newest release' }) + ' (about 60 MB)...')
+Write-Host ('  Downloading ' + $(if ($ver) { 'v' + $ver } else { 'the newest release' }) + ' (about 71 MB)...')
 Invoke-WebRequest -Uri $ZipUrl -OutFile $tmp -UseBasicParsing
 
 # 5. Install into %LOCALAPPDATA%\Programs\F1RaceEngineer. The release layout is one exe
