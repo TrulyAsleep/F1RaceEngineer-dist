@@ -33,6 +33,7 @@ $AppZip     = 'F1RaceEngineer.zip'                     # the legacy, unversioned
 # ReleaseAssets.IsAppZip in the app.
 $AppZipRx   = '^F1RaceEngineer(-\d[0-9A-Za-z.+-]*)?\.zip$'
 $VersionTag = '^[vV]?\d+(\.\d+)+([-+].*)?$'   # two numeric parts at least, same as ReleaseChannel.IsVersionTag
+$LiveTag    = '^[vV]?\d+(\.\d+)+$'             # a release: no prerelease part, and never a dev-<ver> tag
 $ZipUrl = ''
 $ver = ''
 $rel = $null
@@ -45,6 +46,12 @@ try {
   }
 } catch {
   if ($Branch -eq 'beta') { throw 'Could not list releases for the beta branch - try again in a minute.' }
+}
+# GitHub's "latest" is never a pre-release, but a dev or beta build published without the flag
+# by mistake would be it, and the downgrade check below cannot read a dev-<ver> version. Live
+# installs a release or nothing (docs\DEV-BUILD.md, "The dev branch").
+if ($rel -and $Branch -ne 'beta' -and $rel.tag_name -notmatch $LiveTag) {
+  throw ('The latest release (' + $rel.tag_name + ') is not a live build - nothing was changed. Install by hand from https://github.com/' + $Repo + '/releases.')
 }
 
 # The app is the asset named exactly F1RaceEngineer.zip, never the first .zip on the
