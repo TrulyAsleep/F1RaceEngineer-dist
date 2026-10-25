@@ -28,9 +28,9 @@ if (Test-Path $Install) {
   Write-Host ('  No install found at ' + $Install)
 }
 
-# 3. Remove Start Menu + Desktop shortcuts (both the app and the uninstall link).
+# 3. Remove Start Menu + Desktop shortcuts (the app, the problem report and the uninstall link).
 foreach ($dir in @([Environment]::GetFolderPath('Programs'), [Environment]::GetFolderPath('Desktop'))) {
-  foreach ($name in @('F1 Race Engineer.lnk', 'Uninstall F1 Race Engineer.lnk')) {
+  foreach ($name in @('F1 Race Engineer.lnk', 'Uninstall F1 Race Engineer.lnk', 'Report a problem with F1 Race Engineer.lnk')) {
     $lnk = Join-Path $dir $name
     if (Test-Path $lnk) { Remove-Item $lnk -Force -ErrorAction SilentlyContinue }
   }

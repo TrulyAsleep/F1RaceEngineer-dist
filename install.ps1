@@ -150,6 +150,13 @@ foreach ($dir in @([Environment]::GetFolderPath('Programs'), [Environment]::GetF
   $lnk.Description       = 'F1 Race Engineer'
   $lnk.Save()
 }
+# The problem-report window, for a copy that will not start: the app's own exe with --report.
+$rlnk = $shell.CreateShortcut((Join-Path ([Environment]::GetFolderPath('Programs')) 'Report a problem with F1 Race Engineer.lnk'))
+$rlnk.TargetPath       = $AppExe
+$rlnk.Arguments        = '--report'
+$rlnk.WorkingDirectory = $Install
+$rlnk.Description       = 'Report a problem with F1 Race Engineer'
+$rlnk.Save()
 
 # 7. Register an uninstaller: a Start Menu "Uninstall" shortcut + a Windows
 #    "Apps & features" entry (so it can also be removed from Settings). Both run
