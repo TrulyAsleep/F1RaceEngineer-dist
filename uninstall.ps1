@@ -30,7 +30,9 @@ if (Test-Path $Install) {
 
 # 3. Remove Start Menu + Desktop shortcuts (the app, the problem report and the uninstall link).
 foreach ($dir in @([Environment]::GetFolderPath('Programs'), [Environment]::GetFolderPath('Desktop'))) {
-  foreach ($name in @('F1 Race Engineer.lnk', 'Uninstall F1 Race Engineer.lnk', 'Report a problem with F1 Race Engineer.lnk')) {
+  # Both names: the product was F1 Race Engineer until 0.5.0, Push 2 Pass since.
+  foreach ($name in @('Push 2 Pass.lnk', 'Uninstall Push 2 Pass.lnk', 'Report a problem with Push 2 Pass.lnk',
+                      'F1 Race Engineer.lnk', 'Uninstall F1 Race Engineer.lnk', 'Report a problem with F1 Race Engineer.lnk')) {
     $lnk = Join-Path $dir $name
     if (Test-Path $lnk) { Remove-Item $lnk -Force -ErrorAction SilentlyContinue }
   }
@@ -42,7 +44,7 @@ Write-Host '  Removed shortcuts.'
 $uninstBase = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall'
 Get-ChildItem $uninstBase -ErrorAction SilentlyContinue | ForEach-Object {
   $dn = (Get-ItemProperty $_.PSPath -ErrorAction SilentlyContinue).DisplayName
-  if ($dn -eq 'F1 Race Engineer') { Remove-Item $_.PSPath -Recurse -Force -ErrorAction SilentlyContinue }
+  if ($dn -eq 'Push 2 Pass' -or $dn -eq 'F1 Race Engineer') { Remove-Item $_.PSPath -Recurse -Force -ErrorAction SilentlyContinue }
 }
 
 # 5. User data - kept unless -PurgeData was passed.

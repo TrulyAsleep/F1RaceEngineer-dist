@@ -1,4 +1,4 @@
-# F1 Race Engineer - installer.
+# Push 2 Pass (F1 Race Engineer until 0.5.0) - installer.
 # Run from Win+R or PowerShell:
 #   powershell -NoProfile -ExecutionPolicy Bypass -Command "irm https://raw.githubusercontent.com/TrulyAsleep/F1RaceEngineer-dist/main/install.ps1 | iex"
 # Re-run any time to update to the newest release on your branch.
@@ -19,7 +19,7 @@ $AppExe  = Join-Path $Install 'F1RaceEngineer.App.exe'
 $Api     = @{ 'User-Agent' = 'F1RE-install'; 'Accept' = 'application/vnd.github+json' }
 
 Write-Host ''
-Write-Host ("  F1 RACE ENGINEER - installing (" + $Branch + " branch)") -ForegroundColor Cyan
+Write-Host ("  PUSH 2 PASS - installing (" + $Branch + " branch)") -ForegroundColor Cyan
 Write-Host ''
 
 # 1. Resolve the release. GitHub's "latest" hides prereleases, which is exactly the
@@ -119,7 +119,7 @@ Add-Type -AssemblyName System.IO.Compression.FileSystem
 Remove-Item -LiteralPath $tmp -Force -ErrorAction SilentlyContinue
 if (-not (Test-Path -LiteralPath (Join-Path $stage 'F1RaceEngineer.App.exe'))) {
   Remove-Item -LiteralPath $stage -Recurse -Force -ErrorAction SilentlyContinue
-  throw 'The download is not a F1 Race Engineer release (no F1RaceEngineer.App.exe inside) - nothing was changed.'
+  throw 'The download is not a Push 2 Pass release (no F1RaceEngineer.App.exe inside) - nothing was changed.'
 }
 if (Test-Path -LiteralPath $Install) { Remove-Item -LiteralPath $Install -Recurse -Force -ErrorAction SilentlyContinue }
 [System.IO.Directory]::CreateDirectory($Install) | Out-Null
@@ -141,21 +141,27 @@ Remove-Item -LiteralPath $stage -Recurse -Force -ErrorAction SilentlyContinue
 
 if (-not (Test-Path -LiteralPath $AppExe)) { throw ('Install looks incomplete - ' + $AppExe + ' is missing.') }
 
-# 6. Start Menu + Desktop shortcuts.
+# 6. Start Menu + Desktop shortcuts. The product was F1 Race Engineer until 0.5.0: an
+#    install from then has shortcuts under that name, which would sit beside the new ones.
+foreach ($dir in @([Environment]::GetFolderPath('Programs'), [Environment]::GetFolderPath('Desktop'))) {
+  foreach ($old in @('F1 Race Engineer.lnk', 'Report a problem with F1 Race Engineer.lnk', 'Uninstall F1 Race Engineer.lnk')) {
+    Remove-Item -LiteralPath (Join-Path $dir $old) -Force -ErrorAction SilentlyContinue
+  }
+}
 $shell = New-Object -ComObject WScript.Shell
 foreach ($dir in @([Environment]::GetFolderPath('Programs'), [Environment]::GetFolderPath('Desktop'))) {
-  $lnk = $shell.CreateShortcut((Join-Path $dir 'F1 Race Engineer.lnk'))
+  $lnk = $shell.CreateShortcut((Join-Path $dir 'Push 2 Pass.lnk'))
   $lnk.TargetPath       = $AppExe
   $lnk.WorkingDirectory = $Install
-  $lnk.Description       = 'F1 Race Engineer'
+  $lnk.Description       = 'Push 2 Pass'
   $lnk.Save()
 }
 # The problem-report window, for a copy that will not start: the app's own exe with --report.
-$rlnk = $shell.CreateShortcut((Join-Path ([Environment]::GetFolderPath('Programs')) 'Report a problem with F1 Race Engineer.lnk'))
+$rlnk = $shell.CreateShortcut((Join-Path ([Environment]::GetFolderPath('Programs')) 'Report a problem with Push 2 Pass.lnk'))
 $rlnk.TargetPath       = $AppExe
 $rlnk.Arguments        = '--report'
 $rlnk.WorkingDirectory = $Install
-$rlnk.Description       = 'Report a problem with F1 Race Engineer'
+$rlnk.Description       = 'Report a problem with Push 2 Pass'
 $rlnk.Save()
 
 # 7. Register an uninstaller: a Start Menu "Uninstall" shortcut + a Windows
@@ -164,11 +170,11 @@ $rlnk.Save()
 $psExe        = Join-Path $env:WINDIR 'System32\WindowsPowerShell\v1.0\powershell.exe'
 $UninstallArg = '-NoProfile -ExecutionPolicy Bypass -Command "irm https://raw.githubusercontent.com/TrulyAsleep/F1RaceEngineer-dist/main/uninstall.ps1 | iex"'
 
-$ulnk = $shell.CreateShortcut((Join-Path ([Environment]::GetFolderPath('Programs')) 'Uninstall F1 Race Engineer.lnk'))
+$ulnk = $shell.CreateShortcut((Join-Path ([Environment]::GetFolderPath('Programs')) 'Uninstall Push 2 Pass.lnk'))
 $ulnk.TargetPath       = $psExe
 $ulnk.Arguments        = $UninstallArg
 $ulnk.WorkingDirectory = $Install
-$ulnk.Description       = 'Uninstall F1 Race Engineer'
+$ulnk.Description       = 'Uninstall Push 2 Pass'
 $ulnk.Save()
 
 # The exe carries the version the app itself reports; prefer it over the tag.
@@ -176,8 +182,8 @@ try { $exeVer = (Get-Item -LiteralPath $AppExe).VersionInfo.ProductVersion; if (
 
 $reg = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\F1RaceEngineer'
 New-Item -Path $reg -Force | Out-Null
-New-ItemProperty -Path $reg -Name 'DisplayName'     -Value 'F1 Race Engineer'             -Force | Out-Null
-New-ItemProperty -Path $reg -Name 'Publisher'       -Value 'F1 Race Engineer'             -Force | Out-Null
+New-ItemProperty -Path $reg -Name 'DisplayName'     -Value 'Push 2 Pass'                  -Force | Out-Null
+New-ItemProperty -Path $reg -Name 'Publisher'       -Value 'Push 2 Pass'                  -Force | Out-Null
 New-ItemProperty -Path $reg -Name 'DisplayIcon'     -Value $AppExe                        -Force | Out-Null
 New-ItemProperty -Path $reg -Name 'InstallLocation' -Value $Install                       -Force | Out-Null
 New-ItemProperty -Path $reg -Name 'UninstallString' -Value ($psExe + ' ' + $UninstallArg) -Force | Out-Null
@@ -186,7 +192,7 @@ New-ItemProperty -Path $reg -Name 'NoRepair' -PropertyType DWord -Value 1 -Force
 if ($ver) { New-ItemProperty -Path $reg -Name 'DisplayVersion' -Value $ver -Force | Out-Null }
 
 Write-Host ''
-Write-Host '  Done - launching F1 Race Engineer.' -ForegroundColor Green
-Write-Host '  (Also on your Start Menu and Desktop as "F1 Race Engineer".)'
+Write-Host '  Done - launching Push 2 Pass.' -ForegroundColor Green
+Write-Host '  (Also on your Start Menu and Desktop as "Push 2 Pass".)'
 Write-Host ''
 Start-Process $AppExe

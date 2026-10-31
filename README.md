@@ -1,4 +1,7 @@
-# F1 Race Engineer
+# Push 2 Pass
+
+*Box 2 Overtake.* Called F1 Race Engineer until 0.5.0; the downloads, the setup and this repo keep
+that name for now.
 
 A voice race-engineer app for **F1 26** (F1 25 + 2026 Season) — strategy, tyre, ERS, fuel and gap
 calls made live from the game's telemetry, a live dashboard and lap review, plus a Discord-linked
@@ -43,8 +46,8 @@ Live and Beta update branches.
 
 ## Uninstall
 
-- **Windows Settings → Apps → Installed apps → F1 Race Engineer → Uninstall** (both install methods
-  register here), or the **"Uninstall F1 Race Engineer"** Start-Menu shortcut.
+- **Windows Settings → Apps → Installed apps → Push 2 Pass (F1 Race Engineer before 0.5.0) → Uninstall** (both install methods
+  register here), or the **"Uninstall Push 2 Pass"** Start-Menu shortcut.
 - **Or the one-liner:**
 
   ```
